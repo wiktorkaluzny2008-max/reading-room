@@ -12,7 +12,9 @@ A minimal personal SAT Reading and Writing practice app. No login, server, or da
 
 ## Collection
 
-300 questions from user-provided College Board exports: 100 Information and Ideas, 100 Craft and Structure, and 100 Expression of Ideas. Standard English Conventions is not yet imported. This is not the entire official bank. The later full Information and Ideas PDF is not incorporated in this release.
+755 questions from user-provided College Board exports: 555 Information and Ideas, 100 Craft and Structure, and 100 Expression of Ideas. Standard English Conventions is not yet imported. This is not the entire official bank.
+
+The 726-page Information and Ideas PDF was reconciled by College Board question ID and normalized question content. All 555 source questions are represented: 100 already existed and 455 were added with answers, rationales, and 460 original question images. Existing records and IDs were preserved to retain saved progress. See `imports/information-and-ideas-2026-10-24.json` for the import manifest.
 
 These domain practice groups are not the SAT's two adaptive test modules. Reading Room is independent and is not affiliated with College Board. The question content remains attributable to College Board.
 
@@ -54,3 +56,4 @@ Alternatively, run `node scripts/prepare-assets.mjs` and serve `public/` using a
 ## Validation
 
 `npm test` checks question data and image completeness, scoring and unique statistics, independent module persistence, filter queues, session completion, pacing, and backup validation. Browser checks cover grading, next question, switching modules, and reload/resume. Production deployment status must be checked in Cloudflare separately.
+
