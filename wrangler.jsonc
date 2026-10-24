@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "reading-room",
+  "compatibility_date": "2026-10-24",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public"
+  },
+  "build": {
+    "command": "node scripts/prepare-assets.mjs"
+  }
+}
