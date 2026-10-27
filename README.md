@@ -9,7 +9,7 @@ A minimal personal SAT practice app for Reading and Writing and Math. No login, 
 - Math practice with the College Board exam version of the Desmos graphing calculator docked in a resizable split screen. The calculator keeps its work while you move between questions. Grid-in (student-produced response) questions accept any equivalent value, such as 6/34 for 3/17.
 - Everything saves automatically: chosen answers, typed answers, timers, and checked answers. Reopen the site to continue exactly where you left off.
 - Past questions: every answer is listed with its time, result, and a review of the question, your answer, the correct answer, and the explanation. Within a session, use Previous questions to look back.
-- Bluebook practice tools: the answer eliminator (cross out choices), Mark for Review, highlights with notes on question text, a hideable timer, the line reader, and for Math the reference sheet plus a grid-in answer preview, input limits, and directions. Crossed-out choices and highlights save with your progress.
+- Bluebook practice tools: the answer eliminator (cross out choices), Mark for Review, highlights with notes on question text, a hideable timer, a text-size control (85–200%, remembered per browser), the line reader, and for Math the reference sheet plus a grid-in answer preview, input limits, and directions. Crossed-out choices and highlights save with your progress.
 - Review mistakes and questions marked for review, export/restore backups, and restore automatic daily snapshots.
 
 ## Collection
