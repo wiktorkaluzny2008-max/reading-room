@@ -51,6 +51,12 @@ export function merge(a,b){if(a.savedAt>b.savedAt)[a,b]=[b,a];const seen=new Set
  const fa=a.flagsAt??0,fb=b.flagsAt??0,bookmarks=fa===fb?[...new Set([...a.bookmarks,...b.bookmarks])]:fa>fb?a.bookmarks:b.bookmarks;
  return {...b,attempts,sessions,bookmarks,flagsAt:Math.max(fa,fb),marks,lastSession:b.lastSession??a.lastSession};}
 
+// What a sync needs to compare: everything except the save time and running timers, with keys in a fixed
+// order, so two copies with the same progress always match.
+const canon=v=>Array.isArray(v)?v.map(canon):v&&typeof v==='object'?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canon(v[k])])):v;
+export const fingerprint = s => JSON.stringify(canon({...s,savedAt:0,sessions:Object.fromEntries(Object.entries(s.sessions||{}).map(([k,v])=>[k,{...v,remaining:0,elapsed:0,paused:false}]))}));
+export function hash(text){let h=0x811c9dc5;for(let i=0;i<text.length;i++){h^=text.charCodeAt(i);h=Math.imul(h,0x01000193);}return (h>>>0).toString(36)+':'+text.length;}
+
 // Version 1 only had Reading and Writing sessions keyed by [domain,difficulty,skill,mode].
 export function migrate(s){if(s?.version===2)return {marks:{},...s};if(!s||s.version!==1||!s.sessions||typeof s.sessions!=='object')return s;const sessions={};let lastSession=null;
  for(const [key,v] of Object.entries(s.sessions)){if(!v?.options)continue;const options={section:'rw',domain:v.options.domain,skill:v.options.skill||'All',difficulty:v.options.difficulty||'All',mode:v.options.mode||'all'},k=sessionKey(options);sessions[k]={...v,response:'',options};if(key===s.lastSession)lastSession=k;}

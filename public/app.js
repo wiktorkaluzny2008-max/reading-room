@@ -1,7 +1,7 @@
-import {SECTIONS,DIFFICULTIES,MODES,KEY,slug,fresh,budget,latest,stats,matches,queue,sessionKey,makeSession,recordAnswer,nextQuestion,migrate,merge,validState,selfGraded,cleanResponse,toggleStrike,unstrike,setHighlights,esc} from './core.js';
+import {SECTIONS,DIFFICULTIES,MODES,KEY,slug,fresh,budget,latest,stats,matches,queue,sessionKey,makeSession,recordAnswer,nextQuestion,migrate,merge,fingerprint,hash,validState,selfGraded,cleanResponse,toggleStrike,unstrike,setHighlights,esc} from './core.js';
 import {rangeOffsets,applyHighlights,overlaps,preview,gridIn,GRID_DIRECTIONS,REFERENCE,lineReader} from './tools.js';
 import {load,item,clean} from './content.js';
-import {syncCode,setSyncCode,newCode,normalizeCode,formatCode,push} from './sync.js';
+import {syncCode,setSyncCode,newCode,normalizeCode,formatCode,push,pull,syncMeta,setSyncMeta} from './sync.js';
 import {mirror,idbGet,idbPut,snapshots,requestPersistence,persisted} from './storage.js';
 const $=s=>document.querySelector(s), letters=['A','B','C','D'];
 const icons={grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',book:'<path d="M12 5v16m0-16C8 2 4 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-6-2-10 1z"/>',calc:'<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h.01M12 19h4"/>',history:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/>',arrow:'<path d="M4 12h16m-6-6 6 6-6 6"/>',check:'<path d="m5 12 4 4L19 6"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',save:'<path d="M6 3h12v18l-6-4-6 4z"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/>',flag:'<path d="M5 21V4m0 0h11l-2 4 2 4H5"/>',settings:'<circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/>'};
@@ -26,8 +26,11 @@ function commit(fn,important=true){if(corruptRaw){toast('Export the unreadable s
 // Sync across browsers: upload after changes (batched), on load, every minute, and when the tab is shown or hidden.
 function scheduleSync(delay=3000){if(!syncCode())return;clearTimeout(syncTimer);syncTimer=setTimeout(syncNow,delay);}
 async function syncNow(){const code=syncCode();if(!code||corruptRaw||syncing)return;syncing=true;syncStatus={...syncStatus,state:'syncing'};showSync();
- try{const remote=await push(code,state),other=remote&&parseState(remote);if(remote&&!other)throw Error('The synced copy does not match this question collection.');
-  if(other){const was=JSON.stringify({...state,savedAt:0});state=merge(state,other);save(true);if(JSON.stringify({...state,savedAt:0})!==was&&!$('dialog[open]:not(#ref-dialog)')&&!notePop)render();}syncStatus={state:'ok',at:Date.now()};}
+ try{const meta=syncMeta(code),mine=hash(fingerprint(state)),changed=mine!==meta.sent,reply=changed?await push(code,state):await pull(code,meta.version),remote=reply.state,other=remote&&parseState(remote);
+  if(remote&&!other)throw Error('The synced copy does not match this question collection.');
+  // Only a real change is uploaded; otherwise a version check that is a few bytes when nothing is new.
+  if(other){const was=JSON.stringify({...state,savedAt:0});state=merge(state,other);save(true);if(JSON.stringify({...state,savedAt:0})!==was&&!$('dialog[open]:not(#ref-dialog)')&&!notePop)render();}// Record what the server now holds, so anything changed here while the request was in flight still uploads next time.
+  setSyncMeta({code,version:reply.version,sent:other?hash(fingerprint(other)):changed?mine:meta.sent});syncStatus={state:'ok',at:Date.now()};}
  catch(e){syncStatus={state:'error',at:syncStatus.at,message:navigator.onLine===false?'You are offline. Progress is still saved here and will sync when you reconnect.':e.message};}
  finally{syncing=false;showSync();}}
 function syncLine(){const code=syncCode();if(!code)return 'Saved on this browser';return syncStatus.state==='error'?'Sync paused':syncStatus.state==='syncing'?'Syncing…':syncStatus.at?`Synced ${new Date(syncStatus.at).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'})}`:'Sync on';}
