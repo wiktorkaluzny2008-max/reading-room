@@ -1,22 +1,21 @@
 # Reading Room
 
-A minimal personal SAT Reading and Writing practice app. No login, server, or database required.
+A minimal personal SAT practice app for Reading and Writing and Math. No login, server, or database required.
 
 ## Features
 
-- Dashboard: unique questions completed, latest-answer accuracy, correct/incorrect counts by difficulty, module progress, weekly activity, and recent answers.
-- Four content-domain practice groups, with independent resumable sessions. Filter by skill, difficulty, incorrect answers, or bookmarks; filtered sessions save independently too.
-- Immediate answer grading and original College Board explanations; original question images preserve charts and underlining.
-- Saved choice, question index, answer reveal, and timer on reload. Timer pauses when away and never auto-submits.
-- Review mistakes, bookmark questions, export/restore progress backups, and keyboard shortcuts.
+- Home dashboard with overall and per-section progress, difficulty breakdown, weekly activity, and recent answers.
+- Reading and Writing and Math sections. Each section is divided into its official domains; choose a domain, then a skill (or all skills in the domain). Filter by difficulty and by new, all, incorrect, or bookmarked questions. Every domain/skill/filter combination keeps its own saved place.
+- Math practice with the College Board exam version of the Desmos graphing calculator docked in a resizable split screen. The calculator keeps its work while you move between questions. Grid-in (student-produced response) questions accept any equivalent value, such as 6/34 for 3/17.
+- Everything saves automatically: chosen answers, typed answers, timers, and checked answers. Reopen the site to continue exactly where you left off.
+- Past questions: every answer is listed with its time, result, and a review of the question, your answer, the correct answer, and the explanation. Within a session, use Previous questions to look back.
+- Review mistakes and bookmarks, export/restore backups, and restore automatic daily snapshots.
 
 ## Collection
 
-755 questions from user-provided College Board exports: 555 Information and Ideas, 100 Craft and Structure, and 100 Expression of Ideas. Standard English Conventions is not yet imported. This is not the entire official bank.
+3,770 questions from user-provided College Board question-bank exports: 1,845 Reading and Writing and 1,925 Math. The original 755 Reading and Writing questions keep their IDs and lossless original images; `scripts/import-qbank.py` imported the rest of `sat_qbank_all.json` (see `imports/qbank-all.json`), matching existing questions by answer choices and passage so none is added twice. Imported question HTML is loaded on demand from `public/bank/pNN.json` and sanitized before display; `public/bank/index.json` holds the metadata. Seven grid-in questions have no machine-readable answer key, so you mark those yourself after reading the explanation.
 
-The 726-page Information and Ideas PDF was reconciled by College Board question ID and normalized question content. All 555 source questions are represented: 100 already existed and 455 were added with answers, rationales, and 460 original question images. Existing records and IDs were preserved to retain saved progress. See `imports/information-and-ideas-2026-10-24.json` for the import manifest.
-
-These domain practice groups are not the SAT's two adaptive test modules. Reading Room is independent and is not affiliated with College Board. The question content remains attributable to College Board.
+Reading Room is independent and is not affiliated with College Board. The question content remains attributable to College Board. The calculator is provided by Desmos.
 
 ## Cloudflare deployment
 
@@ -34,11 +33,11 @@ The lossless question images are stored in JSON asset packs to keep repository t
 
 ## Progress and backups
 
-Progress is stored in localStorage under `reading-room-v1`, separately for each browser and site origin. It does not synchronize across devices. Clearing browser data removes it. Settings → Export backup downloads results and checkpoints; Restore backup validates the file and replaces local progress after confirmation. Keep backups before changing computers or clearing storage. Existing progress on the previous ChatGPT-hosted site is not migrated automatically.
+Progress is saved on every change to localStorage under `reading-room-v1` and mirrored to IndexedDB (`reading-room`), with a daily snapshot kept for 14 days. On load the newest valid copy wins, so a damaged copy in one store is recovered from the other. The app also asks the browser to keep its storage persistent. Earlier (version 1) progress is migrated automatically, and the untouched original is kept under `reading-room-v1-pre-v2`. Progress is separate for each browser and site origin, does not synchronize across devices, and clearing the site's browser data removes it. Settings → Export backup downloads results and checkpoints; Restore backup validates the file and replaces local progress after confirmation. Keep backups before changing computers or clearing storage. Existing progress on the previous ChatGPT-hosted site is not migrated automatically.
 
 ## Timing
 
-The SAT Reading and Writing section has 54 questions in 64 minutes: a rounded 71 seconds per question. The optional 45–90-second skill budgets are practice heuristics, not official category time limits.
+The SAT Reading and Writing section has 54 questions in 64 minutes: a rounded 71 seconds per question. Math has 44 questions in 70 minutes: a rounded 95 seconds per question. The optional 45–90-second skill budgets are practice heuristics, not official category time limits.
 Source: https://satsuite.collegeboard.org/sat/whats-on-the-test/structure
 
 ## Local development
@@ -55,5 +54,5 @@ Alternatively, run `node scripts/prepare-assets.mjs` and serve `public/` using a
 
 ## Validation
 
-`npm test` checks question data and image completeness, scoring and unique statistics, independent module persistence, filter queues, session completion, pacing, and backup validation. Browser checks cover grading, next question, switching modules, and reload/resume. Production deployment status must be checked in Cloudflare separately.
+`npm test` checks question data, pack and image completeness, the import manifest, scoring (including grid-in equivalence), unique statistics, independent session persistence, version 1 migration, filter queues, session completion, pacing, and backup validation. Browser checks cover grading, next question, switching modules, and reload/resume. Production deployment status must be checked in Cloudflare separately.
 

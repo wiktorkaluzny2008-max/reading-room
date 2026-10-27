@@ -1,14 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fresh,DOMAINS,stats,queue,sessionKey,makeSession,recordAnswer,nextQuestion,validState} from '../public/core.js';
+import {fresh,stats,queue,sessionKey,makeSession,recordAnswer,nextQuestion,validState,migrate,checkResponse} from '../public/core.js';
 // Synthetic fixtures for application logic, not practice-bank content.
 const questions=[
- {id:'fixture-1',skill:'Command of Evidence',difficulty:'Easy',answer:2},
- {id:'fixture-2',skill:'Inferences',difficulty:'Hard',answer:0},
- {id:'fixture-3',skill:'Words in Context',difficulty:'Medium',answer:1}
+ {id:'fixture-1',s:'rw',d:'Information and Ideas',k:'Command of Evidence',l:'Easy',t:'mcq',a:2},
+ {id:'fixture-2',s:'rw',d:'Information and Ideas',k:'Inferences',l:'Hard',t:'mcq',a:0},
+ {id:'fixture-3',s:'rw',d:'Craft and Structure',k:'Words in Context',l:'Medium',t:'mcq',a:1},
+ {id:'fixture-4',s:'math',d:'Algebra',k:'Linear functions',l:'Medium',t:'spr',a:['3/17','.1764']},
+ {id:'fixture-5',s:'math',d:'Algebra',k:'Linear functions',l:'Hard',t:'spr'}
 ];
-function start(s,domain){const o={domain,difficulty:'All',skill:'All',mode:'all'},k=sessionKey(o);s.sessions[k]=makeSession(queue(questions,s,o),o,questions,s.pace);s.lastSession=k;return [k,s.sessions[k]];}
-test('modules keep independent checkpoints through serialization',()=>{const s=fresh(),[a,x]=start(s,DOMAINS[0]);x.choice=2;x.remaining=20;recordAnswer(s,a,questions);nextQuestion(x,questions,s.pace);const [b,y]=start(s,DOMAINS[1]);y.choice=1;const copy=JSON.parse(JSON.stringify(s));assert.ok(validState(copy,questions));assert.equal(copy.sessions[a].index,1);assert.equal(copy.sessions[b].index,0);assert.equal(copy.sessions[b].choice,1);});
-test('grading prevents double submissions and statistics count latest unique answers',()=>{const s=fresh(),[k,x]=start(s,DOMAINS[0]);x.choice=1;recordAnswer(s,k,questions);assert.equal(recordAnswer(s,k,questions),false);assert.equal(stats(questions,s.attempts).wrong,1);x.revealed=false;x.choice=2;recordAnswer(s,k,questions);assert.equal(stats(questions,s.attempts).done,1);assert.equal(stats(questions,s.attempts).right,1);assert.equal(stats(questions,s.attempts).wrong,0);});
-test('invalid checkpoints and falsified backup results are rejected',()=>{const s=fresh(),[k,x]=start(s,DOMAINS[0]);x.choice=2;recordAnswer(s,k,questions);assert.ok(validState(s,questions));s.attempts[0].correct=false;assert.equal(validState(s,questions),false);s.attempts[0].correct=true;x.index=100;assert.equal(validState(s,questions),false);});
+const opts=(section,domain,extra)=>({section,domain,skill:'All',difficulty:'All',mode:'all',...extra});
+function start(s,o){const k=sessionKey(o);s.sessions[k]=makeSession(queue(questions,s,o),o,questions,s.pace);s.lastSession=k;return [k,s.sessions[k]];}
+test('domains keep independent checkpoints through serialization',()=>{const s=fresh(),[a,x]=start(s,opts('rw','Information and Ideas'));x.choice=2;x.remaining=20;recordAnswer(s,a,questions);nextQuestion(x,questions,s.pace);const [b,y]=start(s,opts('rw','Craft and Structure'));y.choice=1;const copy=JSON.parse(JSON.stringify(s));assert.ok(validState(copy,questions));assert.equal(copy.sessions[a].index,1);assert.equal(copy.sessions[b].index,0);assert.equal(copy.sessions[b].choice,1);});
+test('grading prevents double submissions and statistics count latest unique answers',()=>{const s=fresh(),[k,x]=start(s,opts('rw','Information and Ideas'));x.choice=1;recordAnswer(s,k,questions);assert.equal(recordAnswer(s,k,questions),false);assert.equal(stats(questions,s.attempts).wrong,1);x.revealed=false;x.choice=2;recordAnswer(s,k,questions);assert.equal(stats(questions,s.attempts).done,1);assert.equal(stats(questions,s.attempts).right,1);assert.equal(stats(questions,s.attempts).wrong,0);});
+test('grid-in answers accept equivalent values; self-graded ones need a mark',()=>{assert.ok(checkResponse('6/34',['3/17']));assert.ok(checkResponse(' .1764 ',['3/17','.1764']));assert.ok(checkResponse('0.1764',['.1764']));assert.equal(checkResponse('.176',['3/17','.1764']),false);assert.ok(checkResponse('−4',['-4']));
+ const s=fresh(),[k,x]=start(s,opts('math','Algebra'));x.response='6/34';assert.ok(recordAnswer(s,k,questions));assert.equal(s.attempts[0].correct,true);nextQuestion(x,questions,s.pace);x.response='7';assert.equal(recordAnswer(s,k,questions),false);assert.ok(recordAnswer(s,k,questions,false));assert.ok(validState(s,questions));});
+test('new-question queues skip answered questions',()=>{const s=fresh(),[k,x]=start(s,opts('rw','Information and Ideas'));x.choice=0;recordAnswer(s,k,questions);assert.deepEqual(queue(questions,s,opts('rw','Information and Ideas',{mode:'new'})),['fixture-2']);assert.deepEqual(queue(questions,s,opts('rw','Information and Ideas',{mode:'wrong'})),['fixture-1']);});
+test('version 1 progress migrates without losing answers or positions',()=>{const v1={version:1,attempts:[{id:'fixture-1',choice:2,correct:true,at:1,seconds:3}],sessions:{},bookmarks:['fixture-2'],pace:'average',lastSession:null};const o={domain:'Information and Ideas',difficulty:'All',skill:'All',mode:'all'},k=JSON.stringify([o.domain,'All','All','all']);v1.sessions[k]={ids:['fixture-1','fixture-2'],index:1,choice:0,revealed:false,complete:false,remaining:10,elapsed:5,paused:false,options:o,updatedAt:1};v1.lastSession=k;
+ const s=migrate(v1);assert.ok(validState(s,questions));assert.equal(s.attempts.length,1);assert.deepEqual(s.bookmarks,['fixture-2']);const v=s.sessions[s.lastSession];assert.equal(v.index,1);assert.equal(v.choice,0);assert.equal(v.options.section,'rw');});
+test('invalid checkpoints and falsified backup results are rejected',()=>{const s=fresh(),[k,x]=start(s,opts('rw','Information and Ideas'));x.choice=2;recordAnswer(s,k,questions);assert.ok(validState(s,questions));s.attempts[0].correct=false;assert.equal(validState(s,questions),false);s.attempts[0].correct=true;x.index=100;assert.equal(validState(s,questions),false);});
 test('unanswered questions do not count as incorrect',()=>{assert.equal(stats(questions,[]).wrong,0);assert.equal(stats(questions,[]).accuracy,null);});

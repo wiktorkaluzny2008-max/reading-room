@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 const questions=JSON.parse(fs.readFileSync(new URL('../public/questions.json',import.meta.url)));
 const manifest=JSON.parse(fs.readFileSync(new URL('../imports/information-and-ideas-2026-10-24.json',import.meta.url)));
+const qbank=JSON.parse(fs.readFileSync(new URL('../imports/qbank-all.json',import.meta.url)));
+const index=JSON.parse(fs.readFileSync(new URL('../public/bank/index.json',import.meta.url)));
 const normalize=s=>s.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g,'');
 test('every source question appears exactly once, and all additions have images',()=>{
   assert.equal(manifest.sourceQuestionIds.length,555);
@@ -16,4 +18,12 @@ test('every source question appears exactly once, and all additions have images'
     assert.ok(!seen.has(key),`Duplicate content: ${q.id}`);seen.add(key);
     assert.ok(q.images.length>0,q.id);
   }
+});
+test('question-bank import adds every source question once and reuses existing ones',()=>{
+  assert.equal(qbank.sourceQuestions,3770);
+  const matched=Object.values(qbank.matchedExisting);
+  assert.equal(matched.length,755);assert.equal(new Set(matched).size,755);
+  assert.equal(qbank.added+matched.length,qbank.sourceQuestions);
+  for(const id of matched)assert.ok(questions.some(q=>q.id===id),id);
+  for(const id of Object.keys(qbank.matchedExisting))assert.ok(!index.some(q=>q.id===id),id);
 });
