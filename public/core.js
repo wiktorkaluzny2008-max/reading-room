@@ -14,13 +14,14 @@ export const DIFFICULTIES = ['All','Easy','Medium','Hard'];
 export const MODES = [['new','New questions'],['all','All questions'],['wrong','Incorrect answers'],['bookmarked','Marked for review']];
 export const KEY = 'reading-room-v1';
 export const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-export const fresh = () => ({version:2,attempts:[],sessions:{},bookmarks:[],marks:{},pace:'average',lastSession:null,savedAt:0});
+export const fresh = () => ({version:2,attempts:[],sessions:{},bookmarks:[],marks:{},flagsAt:0,pace:'average',lastSession:null,savedAt:0});
 // Per-question exam tools: crossed-out choices (x) and highlights (h) on a text field with an optional note.
+// Each entry records when it last changed (t), and stays as {t} once emptied, so a removal also wins a merge.
 export const FIELDS = ['stimulus','stem','passage','prompt'];
-export function toggleStrike(state,id,i){const m=state.marks[id]||={};const x=new Set(m.x||[]);x.has(i)?x.delete(i):x.add(i);m.x=[...x].sort();if(!m.x.length)delete m.x;if(!Object.keys(m).length)delete state.marks[id];}
+export function toggleStrike(state,id,i){const m=state.marks[id]||={};const x=new Set(m.x||[]);x.has(i)?x.delete(i):x.add(i);m.x=[...x].sort();if(!m.x.length)delete m.x;m.t=Date.now();}
 export function unstrike(state,id,i){if(state.marks[id]?.x?.includes(i))toggleStrike(state,id,i);}
-export function setHighlights(state,id,h){const m=state.marks[id]||={};if(h.length)m.h=h;else delete m.h;if(!Object.keys(m).length)delete state.marks[id];}
-function validMarks(marks,byId){return marks&&typeof marks==='object'&&!Array.isArray(marks)&&Object.entries(marks).every(([id,m])=>byId.has(id)&&m&&typeof m==='object'&&(m.x===undefined||Array.isArray(m.x)&&m.x.length<=4&&new Set(m.x).size===m.x.length&&m.x.every(i=>Number.isInteger(i)&&i>=0&&i<=3))&&(m.h===undefined||Array.isArray(m.h)&&m.h.length<=200&&m.h.every(h=>FIELDS.includes(h.f)&&Number.isInteger(h.s)&&Number.isInteger(h.e)&&h.s>=0&&h.e>h.s&&typeof h.n==='string'&&h.n.length<=2000)));}
+export function setHighlights(state,id,h){const m=state.marks[id]||={};if(h.length)m.h=h;else delete m.h;m.t=Date.now();}
+function validMarks(marks,byId){return marks&&typeof marks==='object'&&!Array.isArray(marks)&&Object.entries(marks).every(([id,m])=>byId.has(id)&&m&&typeof m==='object'&&(m.t===undefined||Number.isFinite(m.t))&&(m.x===undefined||Array.isArray(m.x)&&m.x.length<=4&&new Set(m.x).size===m.x.length&&m.x.every(i=>Number.isInteger(i)&&i>=0&&i<=3))&&(m.h===undefined||Array.isArray(m.h)&&m.h.length<=200&&m.h.every(h=>FIELDS.includes(h.f)&&Number.isInteger(h.s)&&Number.isInteger(h.e)&&h.s>=0&&h.e>h.s&&typeof h.n==='string'&&h.n.length<=2000)));}
 const SKILL_PACE = {'Central Ideas and Details':75,'Command of Evidence':90,'Inferences':90,'Words in Context':45,'Text Structure and Purpose':60,'Cross-Text Connections':90,'Rhetorical Synthesis':75,'Transitions':50,'Boundaries':50,'Form, Structure, and Sense':50};
 export const budget = (q,mode='average') => q?.s==='math'?95:mode==='average'?71:(SKILL_PACE[q?.k]||71);
 export function latest(attempts){const map=new Map();for(const a of attempts)map.set(a.id,a);return map;}
@@ -46,7 +47,9 @@ export function nextQuestion(s,questions,pace){if(!s.revealed)return false;if(s.
 // copies changed the same session, the more recently updated one wins; otherwise the more recently saved copy does.
 export function merge(a,b){if(a.savedAt>b.savedAt)[a,b]=[b,a];const seen=new Set(),attempts=[...a.attempts,...b.attempts].filter(x=>{const k=x.id+'|'+x.at;if(seen.has(k))return false;seen.add(k);return true;}).sort((x,y)=>x.at-y.at);
  const sessions={...a.sessions};for(const [k,v] of Object.entries(b.sessions))if(!sessions[k]||v.updatedAt>=sessions[k].updatedAt)sessions[k]=v;
- return {...b,attempts,sessions,bookmarks:[...new Set([...a.bookmarks,...b.bookmarks])],marks:{...a.marks,...b.marks},lastSession:b.lastSession??a.lastSession};}
+ const marks={...a.marks};for(const [id,m] of Object.entries(b.marks||{}))if(!marks[id]||(m.t??0)>=(marks[id].t??0))marks[id]=m;
+ const fa=a.flagsAt??0,fb=b.flagsAt??0,bookmarks=fa===fb?[...new Set([...a.bookmarks,...b.bookmarks])]:fa>fb?a.bookmarks:b.bookmarks;
+ return {...b,attempts,sessions,bookmarks,flagsAt:Math.max(fa,fb),marks,lastSession:b.lastSession??a.lastSession};}
 
 // Version 1 only had Reading and Writing sessions keyed by [domain,difficulty,skill,mode].
 export function migrate(s){if(s?.version===2)return {marks:{},...s};if(!s||s.version!==1||!s.sessions||typeof s.sessions!=='object')return s;const sessions={};let lastSession=null;
@@ -55,7 +58,7 @@ export function migrate(s){if(s?.version===2)return {marks:{},...s};if(!s||s.ver
 
 export function validState(s,questions){
  const byId=new Map(questions.map(q=>[q.id,q])); const finite=n=>Number.isFinite(n)&&n>=0;
- if(!s||s.version!==2||!Array.isArray(s.attempts)||s.attempts.length>200000||!Array.isArray(s.bookmarks)||!s.bookmarks.every(id=>byId.has(id))||!['average','category'].includes(s.pace)||!s.sessions||typeof s.sessions!=='object'||Array.isArray(s.sessions)||!finite(s.savedAt??0)||!validMarks(s.marks??{},byId))return false;
+ if(!s||s.version!==2||!Array.isArray(s.attempts)||s.attempts.length>200000||!Array.isArray(s.bookmarks)||!s.bookmarks.every(id=>byId.has(id))||!['average','category'].includes(s.pace)||!s.sessions||typeof s.sessions!=='object'||Array.isArray(s.sessions)||!finite(s.savedAt??0)||!finite(s.flagsAt??0)||!validMarks(s.marks??{},byId))return false;
  if(!s.attempts.every(a=>{const q=byId.get(a.id);if(!q||typeof a.correct!=='boolean'||!finite(a.at)||!finite(a.seconds))return false;if(q.t==='mcq')return Number.isInteger(a.choice)&&a.choice>=0&&a.choice<=3&&a.correct===(a.choice===q.a);return typeof a.response==='string'&&a.response.length>0&&a.response.length<=12&&(selfGraded(q)||a.correct===checkResponse(a.response,q.a));}))return false;
  if(!Object.entries(s.sessions).every(([key,v])=>{const o=v?.options,sec=SECTIONS[o?.section];if(!sec)return false;const skills=o.domain==='All'?Object.values(sec.domains).flat():sec.domains[o.domain];
   return skills&&['All',...skills].includes(o.skill)&&DIFFICULTIES.includes(o.difficulty)&&MODES.some(([m])=>m===o.mode)&&key===sessionKey(o)&&Array.isArray(v.ids)&&v.ids.length>0&&v.ids.length<=questions.length&&new Set(v.ids).size===v.ids.length&&v.ids.every(id=>byId.has(id)&&matches(byId.get(id),o))&&Number.isInteger(v.index)&&v.index>=0&&v.index<v.ids.length&&Number.isInteger(v.choice)&&v.choice>=-1&&v.choice<=3&&typeof(v.response??'')==='string'&&typeof v.revealed==='boolean'&&typeof v.complete==='boolean'&&typeof v.paused==='boolean'&&finite(v.remaining)&&v.remaining<=3600&&finite(v.elapsed)&&finite(v.updatedAt);}))return false;

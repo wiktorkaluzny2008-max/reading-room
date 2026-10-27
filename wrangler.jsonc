@@ -1,11 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "reading-room",
+  "main": "src/worker.js",
   "compatibility_date": "2026-10-24",
   "workers_dev": true,
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    "binding": "ASSETS"
   },
+  "durable_objects": {
+    "bindings": [{ "name": "PROGRESS", "class_name": "Progress" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Progress"] }],
   "build": {
     "command": "node scripts/prepare-assets.mjs"
   }
