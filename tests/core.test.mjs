@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fresh,stats,queue,sessionKey,makeSession,recordAnswer,nextQuestion,validState,migrate,checkResponse} from '../public/core.js';
+import {fresh,stats,queue,sessionKey,makeSession,recordAnswer,nextQuestion,validState,migrate,checkResponse,toggleStrike,unstrike,setHighlights} from '../public/core.js';
 // Synthetic fixtures for application logic, not practice-bank content.
 const questions=[
  {id:'fixture-1',s:'rw',d:'Information and Ideas',k:'Command of Evidence',l:'Easy',t:'mcq',a:2},
@@ -20,3 +20,5 @@ test('version 1 progress migrates without losing answers or positions',()=>{cons
  const s=migrate(v1);assert.ok(validState(s,questions));assert.equal(s.attempts.length,1);assert.deepEqual(s.bookmarks,['fixture-2']);const v=s.sessions[s.lastSession];assert.equal(v.index,1);assert.equal(v.choice,0);assert.equal(v.options.section,'rw');});
 test('invalid checkpoints and falsified backup results are rejected',()=>{const s=fresh(),[k,x]=start(s,opts('rw','Information and Ideas'));x.choice=2;recordAnswer(s,k,questions);assert.ok(validState(s,questions));s.attempts[0].correct=false;assert.equal(validState(s,questions),false);s.attempts[0].correct=true;x.index=100;assert.equal(validState(s,questions),false);});
 test('unanswered questions do not count as incorrect',()=>{assert.equal(stats(questions,[]).wrong,0);assert.equal(stats(questions,[]).accuracy,null);});
+test('crossed-out choices and highlights save with progress and are validated',()=>{const s=fresh();toggleStrike(s,'fixture-1',2);toggleStrike(s,'fixture-1',0);assert.deepEqual(s.marks['fixture-1'].x,[0,2]);unstrike(s,'fixture-1',2);assert.deepEqual(s.marks['fixture-1'].x,[0]);toggleStrike(s,'fixture-1',0);assert.equal(s.marks['fixture-1'],undefined);
+ setHighlights(s,'fixture-2',[{f:'stimulus',s:3,e:9,n:'note'}]);assert.ok(validState(JSON.parse(JSON.stringify(s)),questions));s.marks['fixture-2'].h[0].e=1;assert.equal(validState(s,questions),false);s.marks={missing:{x:[1]}};assert.equal(validState(s,questions),false);const old=fresh();delete old.marks;assert.ok(validState(migrate(old),questions));});
