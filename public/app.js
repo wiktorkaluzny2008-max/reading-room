@@ -1,4 +1,4 @@
-import {SECTIONS,DIFFICULTIES,MODES,KEY,slug,fresh,budget,latest,stats,matches,queue,sessionKey,makeSession,recordAnswer,nextQuestion,migrate,validState,selfGraded,cleanResponse,toggleStrike,unstrike,setHighlights,esc} from './core.js';
+import {SECTIONS,DIFFICULTIES,MODES,KEY,slug,fresh,budget,latest,stats,matches,queue,sessionKey,makeSession,recordAnswer,nextQuestion,migrate,merge,validState,selfGraded,cleanResponse,toggleStrike,unstrike,setHighlights,esc} from './core.js';
 import {rangeOffsets,applyHighlights,overlaps,preview,gridIn,GRID_DIRECTIONS,REFERENCE,lineReader} from './tools.js';
 import {load,item,clean} from './content.js';
 import {mirror,idbGet,idbPut,snapshots,requestPersistence,persisted} from './storage.js';
@@ -9,13 +9,16 @@ const icon=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke
 const DESMOS='https://www.desmos.com/testing/collegeboard/graphing', PREFS_KEY='reading-room-prefs';
 let questions=[],byId=new Map(),state=fresh(),route={view:'home'},activeKey=null,peek=null,detailText=false,error='',lastTick=performance.now(),storageOK=true,corruptRaw=null,shownSelf=null,historyFilter={section:'All',result:'All',limit:50};
 let prefs={difficulty:'All',mode:'new',calc:true,calcWidth:520,...readJSON(PREFS_KEY)};
-let toastTimer,mirrorTimer,dock=null,readerOn=false;
+let toastTimer,mirrorTimer,dock=null,readerOn=false,lastRaw=null;
 function readJSON(key){try{return JSON.parse(localStorage.getItem(key));}catch{return null;}}
 function writeJSON(key,value){try{localStorage.setItem(key,JSON.stringify(value));}catch{}}
 function toast(message){$('#toast').textContent=message;$('#toast').classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4500);}
 
 // Saving: localStorage on every change, IndexedDB mirror right away for answers and within 2 seconds otherwise.
-function save(important=false){if(corruptRaw)return false;state.savedAt=Date.now();const json=JSON.stringify(state);let ok=true;try{localStorage.setItem(KEY,json);}catch{ok=false;}
+// If another tab saved since this one last read or wrote, its progress is merged in first, never overwritten.
+function absorb(raw){const other=raw&&raw!==lastRaw&&parseState(raw);lastRaw=raw;if(!other)return false;const before=state.attempts.length;state=merge(state,other);if(activeKey&&!state.sessions[activeKey])activeKey=null;return state.attempts.length!==before;}
+function save(important=false){if(corruptRaw)return false;let ok=true,raw=null;try{raw=localStorage.getItem(KEY);}catch{}const gained=raw!==lastRaw&&absorb(raw);
+ state.savedAt=Date.now();const json=JSON.stringify(state);try{localStorage.setItem(KEY,json);lastRaw=json;}catch{ok=false;}if(gained)queueMicrotask(()=>{render();toast('Progress from another tab was added.');});
  clearTimeout(mirrorTimer);if(important)mirror(json);else mirrorTimer=setTimeout(()=>mirror(JSON.stringify(state)),2000);
  if(!ok&&storageOK)toast('Progress could not be saved in this browser. Export a backup before closing.');storageOK=ok;return ok;}
 function commit(fn,important=true){if(corruptRaw){toast('Export the unreadable saved data, then restore a valid backup in Settings.');return false;}const before=structuredClone(state);fn();if(!save(important)){state=before;return false;}return true;}
@@ -23,8 +26,8 @@ function parseState(raw){try{const s=migrate(typeof raw==='string'?JSON.parse(ra
 async function loadState(){let raw=null;try{raw=localStorage.getItem(KEY);}catch{storageOK=false;}
  const mirrored=await idbGet('latest'),local=raw&&parseState(raw),backup=mirrored&&parseState(mirrored);
  if(raw){try{if(JSON.parse(raw).version===1&&!localStorage.getItem(KEY+'-pre-v2')){localStorage.setItem(KEY+'-pre-v2',raw);await idbPut('pre-v2',raw);}}catch{}}
- const best=[local,backup].filter(Boolean).sort((a,b)=>(b.savedAt-a.savedAt)||(b.attempts.length-a.attempts.length))[0];
- if(best){state=best;if(!local&&raw){await idbPut('unreadable-'+Date.now(),raw);toast('Saved progress was damaged, so it was restored from the automatic backup copy.');}save(true);}
+ const best=local&&backup?merge(local,backup):local||backup;
+ if(best){state=best;lastRaw=raw;if(!local&&raw){await idbPut('unreadable-'+Date.now(),raw);toast('Saved progress was damaged, so it was restored from the automatic backup copy.');}save(true);}
  else if(raw){corruptRaw=raw;error='Saved progress could not be read. The original browser data has not been changed. Export it or restore a backup in Settings before practicing.';}}
 
 const sec=id=>SECTIONS[id], domainsOf=s=>Object.keys(sec(s).domains);
@@ -139,7 +142,7 @@ document.addEventListener('click',e=>{if(notePop&&!e.target.closest('.note-pop')
  if(btn.dataset.pref){const v=btn.dataset.value,p=btn.dataset.pref;if(p.startsWith('h-')){historyFilter={...historyFilter,[p.slice(2)]:v,limit:50};}else{prefs[p]=v;writeJSON(PREFS_KEY,prefs);}render();$(`[data-pref="${p}"][data-value="${CSS.escape(v)}"]`)?.focus();return;}
  if(btn.dataset.snapshot){idbGet(btn.dataset.snapshot).then(raw=>{const s=raw&&parseState(raw);s?replaceState(s,'Snapshot restored.'):toast('That snapshot could not be read.');});return;}
  const s=state.sessions[activeKey];
- if(btn.dataset.choice!==undefined&&s&&!s.revealed&&peek===null){tick();if(commit(()=>{s.choice=Number(btn.dataset.choice);unstrike(state,s.ids[s.index],s.choice);},false)){render();$(`[data-choice="${s.choice}"]`)?.focus();}return;}
+ if(btn.dataset.choice!==undefined&&s&&!s.revealed&&peek===null){tick();if(commit(()=>{s.choice=Number(btn.dataset.choice);s.updatedAt=Date.now();unstrike(state,s.ids[s.index],s.choice);},false)){render();$(`[data-choice="${s.choice}"]`)?.focus();}return;}
  switch(btn.dataset.action){
   case 'pause':tick();if(commit(()=>s.paused=!s.paused,false))render();break;
   case 'text':tick();detailText=!detailText;render();break;
@@ -161,15 +164,17 @@ document.addEventListener('click',e=>{if(notePop&&!e.target.closest('.note-pop')
   case 'persist':requestPersistence().then(ok=>{toast(ok?'This browser will keep your progress.':'The browser declined. Exporting backups keeps your progress safe.');fillStorage();});break;
   case 'export':tick();exportBackup();break;
   case 'import':$('#backup-file').click();break;}});
-document.addEventListener('input',e=>{if(e.target.id!=='spr-input')return;const s=state.sessions[activeKey];if(!s||s.revealed||peek!==null)return;const v=gridIn(e.target.value);if(v!==e.target.value)e.target.value=v;s.response=v;save();const b=$('[data-action="check"]');if(b)b.disabled=!cleanResponse(v);const pv=$('#spr-preview');if(pv)pv.innerHTML=v?`Answer preview: ${preview(v)}`:'';});
+document.addEventListener('input',e=>{if(e.target.id!=='spr-input')return;const s=state.sessions[activeKey];if(!s||s.revealed||peek!==null)return;const v=gridIn(e.target.value);if(v!==e.target.value)e.target.value=v;s.response=v;s.updatedAt=Date.now();save();const b=$('[data-action="check"]');if(b)b.disabled=!cleanResponse(v);const pv=$('#spr-preview');if(pv)pv.innerHTML=v?`Answer preview: ${preview(v)}`:'';});
 document.addEventListener('change',async e=>{const el=e.target;if(el.name==='pace'){commit(()=>state.pace=el.value);toast('Pacing preference saved for the next question.');}
  if(el.id==='backup-file'){try{const file=el.files[0];if(!file)return;if(file.size>30000000)throw Error('Backup file is too large.');const imported=parseState(await file.text());if(!imported)throw Error('This is not a valid backup for this question collection.');replaceState(imported,'Progress restored.');}catch(err){toast(err.message);}finally{el.value='';}}});
 document.addEventListener('keydown',e=>{if(route.view!=='practice'||!activeKey||peek!==null||$('dialog[open]:not(#ref-dialog)')||e.target.closest('.note-pop')||e.ctrlKey||e.metaKey||e.altKey||e.target.closest('#calc-dock')||e.target.isContentEditable||e.target.matches('select,textarea'))return;const s=state.sessions[activeKey];if(!s||s.complete)return;const typing=e.target.matches('input');
  if(!typing&&/^[a-d]$/i.test(e.key)&&!s.revealed){e.preventDefault();$(`[data-choice="${letters.indexOf(e.key.toUpperCase())}"]`)?.click();}
  else if(e.key==='Enter'&&(typing||!e.target.closest('button')||e.target.closest('[data-choice]'))){e.preventDefault();$(`[data-action="${s.revealed?'next':'check'}"]`)?.click();}});
 window.addEventListener('hashchange',go);
-window.addEventListener('pagehide',()=>{tick();save(true);});document.addEventListener('visibilitychange',()=>{lastTick=performance.now();save(true);});
-window.addEventListener('storage',e=>{if(e.key===KEY&&e.newValue){const incoming=parseState(e.newValue);if(incoming&&incoming.savedAt>state.savedAt){state=incoming;if(activeKey&&!state.sessions[activeKey])activeKey=null;render();toast('Progress updated from another tab.');}}});
+window.addEventListener('pagehide',()=>{tick();save(true);});
+// A tab coming back into view first picks up anything saved elsewhere while it was in the background.
+document.addEventListener('visibilitychange',()=>{lastTick=performance.now();if(document.hidden){save(true);return;}let raw=null;try{raw=localStorage.getItem(KEY);}catch{}if(raw!==lastRaw){absorb(raw);render();}});
+window.addEventListener('storage',e=>{if(e.key===KEY&&e.newValue&&e.newValue!==lastRaw){const gained=absorb(e.newValue);render();if(gained)toast('Progress updated from another tab.');}});
 async function init(){try{const res=await fetch('/bank/index.json');if(!res.ok)throw Error('Question collection could not be loaded.');questions=await res.json();byId=new Map(questions.map(q=>[q.id,q]));await loadState();requestPersistence();
  if(location.hash==='#practice'&&!state.sessions[state.lastSession]?.ids)location.replace('#home');go();setInterval(tick,1000);}catch(err){$('#app').innerHTML=`<main class="loading"><h1>Let’s try that again.</h1><p>${esc(err.message)}</p><a href="/">Refresh the page</a></main>`;}}
 init();

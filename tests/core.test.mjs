@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {fresh,stats,queue,sessionKey,makeSession,recordAnswer,nextQuestion,validState,migrate,checkResponse,toggleStrike,unstrike,setHighlights} from '../public/core.js';
+import {fresh,stats,queue,sessionKey,makeSession,recordAnswer,nextQuestion,validState,migrate,checkResponse,toggleStrike,unstrike,setHighlights,merge} from '../public/core.js';
 // Synthetic fixtures for application logic, not practice-bank content.
 const questions=[
  {id:'fixture-1',s:'rw',d:'Information and Ideas',k:'Command of Evidence',l:'Easy',t:'mcq',a:2},
@@ -22,3 +22,5 @@ test('invalid checkpoints and falsified backup results are rejected',()=>{const 
 test('unanswered questions do not count as incorrect',()=>{assert.equal(stats(questions,[]).wrong,0);assert.equal(stats(questions,[]).accuracy,null);});
 test('crossed-out choices and highlights save with progress and are validated',()=>{const s=fresh();toggleStrike(s,'fixture-1',2);toggleStrike(s,'fixture-1',0);assert.deepEqual(s.marks['fixture-1'].x,[0,2]);unstrike(s,'fixture-1',2);assert.deepEqual(s.marks['fixture-1'].x,[0]);toggleStrike(s,'fixture-1',0);assert.equal(s.marks['fixture-1'],undefined);
  setHighlights(s,'fixture-2',[{f:'stimulus',s:3,e:9,n:'note'}]);assert.ok(validState(JSON.parse(JSON.stringify(s)),questions));s.marks['fixture-2'].h[0].e=1;assert.equal(validState(s,questions),false);s.marks={missing:{x:[1]}};assert.equal(validState(s,questions),false);const old=fresh();delete old.marks;assert.ok(validState(migrate(old),questions));});
+test('a stale tab saving later cannot drop answers made in another tab',()=>{const o=opts('rw','Information and Ideas'),k=sessionKey(o),base=fresh();base.sessions[k]=makeSession(queue(questions,base,o),o,questions,base.pace);base.sessions[k].updatedAt=1;base.savedAt=10;const a=JSON.parse(JSON.stringify(base)),b=JSON.parse(JSON.stringify(base));const s=b.sessions[k];s.choice=2;recordAnswer(b,k,questions);s.updatedAt=5;nextQuestion(s,questions,b.pace);b.savedAt=20;a.savedAt=30;a.bookmarks=['fixture-3'];
+ for(const m of [merge(a,b),merge(b,a)]){assert.equal(m.attempts.length,1);assert.equal(m.sessions[k].index,1);assert.deepEqual(m.bookmarks,['fixture-3']);assert.ok(validState(m,questions));}assert.equal(merge(b,b).attempts.length,1);});

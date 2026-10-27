@@ -11,7 +11,7 @@ export const SECTIONS = {
   'Geometry and Trigonometry':['Area and volume','Lines, angles, and triangles','Right triangles and trigonometry','Circles']}}
 };
 export const DIFFICULTIES = ['All','Easy','Medium','Hard'];
-export const MODES = [['new','New questions'],['all','All questions'],['wrong','Incorrect answers'],['bookmarked','Bookmarked']];
+export const MODES = [['new','New questions'],['all','All questions'],['wrong','Incorrect answers'],['bookmarked','Marked for review']];
 export const KEY = 'reading-room-v1';
 export const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 export const fresh = () => ({version:2,attempts:[],sessions:{},bookmarks:[],marks:{},pace:'average',lastSession:null,savedAt:0});
@@ -41,6 +41,12 @@ export function recordAnswer(state,key,questions,selfCorrect){const s=state.sess
  else{const response=cleanResponse(s.response);if(!response)return false;if(selfGraded(q)&&typeof selfCorrect!=='boolean')return false;attempt={id:q.id,response,correct:selfGraded(q)?selfCorrect:checkResponse(response,q.a)};}
  state.attempts.push({...attempt,at:Date.now(),seconds:Math.round(s.elapsed)});s.revealed=true;s.updatedAt=Date.now();return true;}
 export function nextQuestion(s,questions,pace){if(!s.revealed)return false;if(s.index===s.ids.length-1){s.complete=true;return true;}s.index++;s.choice=-1;s.response='';s.revealed=false;s.remaining=budget(questions.find(q=>q.id===s.ids[s.index]),pace);s.elapsed=0;s.paused=false;s.updatedAt=Date.now();return true;}
+
+// Combines two copies of progress (for example from two open tabs) so no answer is ever dropped. Where both
+// copies changed the same session, the more recently updated one wins; otherwise the more recently saved copy does.
+export function merge(a,b){if(a.savedAt>b.savedAt)[a,b]=[b,a];const seen=new Set(),attempts=[...a.attempts,...b.attempts].filter(x=>{const k=x.id+'|'+x.at;if(seen.has(k))return false;seen.add(k);return true;}).sort((x,y)=>x.at-y.at);
+ const sessions={...a.sessions};for(const [k,v] of Object.entries(b.sessions))if(!sessions[k]||v.updatedAt>=sessions[k].updatedAt)sessions[k]=v;
+ return {...b,attempts,sessions,bookmarks:[...new Set([...a.bookmarks,...b.bookmarks])],marks:{...a.marks,...b.marks},lastSession:b.lastSession??a.lastSession};}
 
 // Version 1 only had Reading and Writing sessions keyed by [domain,difficulty,skill,mode].
 export function migrate(s){if(s?.version===2)return {marks:{},...s};if(!s||s.version!==1||!s.sessions||typeof s.sessions!=='object')return s;const sessions={};let lastSession=null;
