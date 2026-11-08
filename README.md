@@ -61,3 +61,7 @@ Alternatively, run `node scripts/prepare-assets.mjs` and serve `public/` using a
 
 `npm test` checks question data, pack and image completeness, the import manifest, scoring (including grid-in equivalence), unique statistics, independent session persistence, version 1 migration, filter queues, session completion, pacing, and backup validation. Browser checks cover grading, next question, switching modules, and reload/resume. Production deployment status must be checked in Cloudflare separately.
 
+
+## iPad app (Reading and Writing only)
+
+Open `ipad/ReadingRoom.xcodeproj` in Xcode to build the offline iPad app. It uses the existing Cloudflare sync code and `/api/sync`, while the Mac/web app continues to include both sections. See [iPad installation, signing, sync setup and testing](ipad/README.md). No backend deployment is required. The iPad packaging tests also require Python 3.
