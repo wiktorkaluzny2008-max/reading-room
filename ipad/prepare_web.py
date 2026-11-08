@@ -46,6 +46,7 @@ def build(destination):
     replace('import {SECTIONS,', 'import {SECTIONS as ALL_SECTIONS,')
     replace("const $=s=>", "const SECTIONS={rw:ALL_SECTIONS.rw};\nconst visibleQuestions=()=>questions.filter(q=>q.s==='rw');\nconst visibleAttempts=()=>state.attempts.filter(a=>byId.get(a.id)?.s==='rw');\nconst readingSession=s=>s?.options.section==='rw'&&s.ids.every(id=>byId.get(id)?.s==='rw');\nconst $=s=>")
     replace("['math','calc','Math'],", '')
+    replace('<a href="#${id}" class="nav-item', '<a href="#${id}" aria-label="${label}" class="nav-item')
     replace('stats(questions,state.attempts)', 'stats(visibleQuestions(),state.attempts)')
     replace('statCards(questions)', 'statCards(visibleQuestions())')
     replace('state.attempts.length} answers', 'visibleAttempts().length} answers')
