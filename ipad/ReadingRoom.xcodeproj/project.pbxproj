@@ -1,0 +1,40 @@
+// !$*UTF8*$!
+{
+ archiveVersion = 1;
+ classes = {};
+ objectVersion = 56;
+ objects = {
+  A00000000000000000000001 = {isa = PBXProject; attributes = {BuildIndependentTargetsInParallel = YES; LastUpgradeCheck = 1600; TargetAttributes = {A00000000000000000000002 = {CreatedOnToolsVersion = 16.0; };};}; buildConfigurationList = A00000000000000000000010; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = A00000000000000000000003; productRefGroup = A00000000000000000000004; projectDirPath = ""; projectRoot = ""; targets = (A00000000000000000000002,B00000000000000000000001);};
+  A00000000000000000000002 = {isa = PBXNativeTarget; buildConfigurationList = A00000000000000000000011; buildPhases = (A00000000000000000000008,A00000000000000000000009,A0000000000000000000000A); buildRules = (); dependencies = (); name = ReadingRoom; productName = ReadingRoom; productReference = A00000000000000000000005; productType = "com.apple.product-type.application";};
+  A00000000000000000000003 = {isa = PBXGroup; children = (C00000000000000000000001,B00000000000000000000003,A00000000000000000000006,A0000000000000000000000B,A00000000000000000000004); sourceTree = "<group>";};
+  A00000000000000000000004 = {isa = PBXGroup; children = (A00000000000000000000005,B00000000000000000000002); name = Products; sourceTree = "<group>";};
+  A00000000000000000000005 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ReadingRoom.app; sourceTree = BUILT_PRODUCTS_DIR;};
+  A00000000000000000000006 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingRoom/App.swift; sourceTree = "<group>";};
+  A00000000000000000000007 = {isa = PBXBuildFile; fileRef = A00000000000000000000006;};
+  A00000000000000000000008 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A00000000000000000000007); runOnlyForDeploymentPostprocessing = 0;};
+  A00000000000000000000009 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (A0000000000000000000000C,C00000000000000000000002); runOnlyForDeploymentPostprocessing = 0;};
+  A0000000000000000000000A = {isa = PBXShellScriptBuildPhase; alwaysOutOfDate = 1; buildActionMask = 2147483647; files = (); inputPaths = (); name = "Bundle offline Reading questions"; outputPaths = ("$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Web"); runOnlyForDeploymentPostprocessing = 0; shellPath = /bin/sh; shellScript = "/usr/bin/python3 \"$SRCROOT/prepare_web.py\" --output \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/Web\"\n";};
+  A0000000000000000000000B = {isa = PBXFileReference; lastKnownFileType = text.xml; path = ReadingRoom/PrivacyInfo.xcprivacy; sourceTree = "<group>";};
+  A0000000000000000000000C = {isa = PBXBuildFile; fileRef = A0000000000000000000000B;};
+  A00000000000000000000010 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000012,A00000000000000000000013); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+  A00000000000000000000011 = {isa = XCConfigurationList; buildConfigurations = (A00000000000000000000014,A00000000000000000000015); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+  A00000000000000000000012 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 16.0; SWIFT_VERSION = 5.0; DEBUG_INFORMATION_FORMAT = dwarf; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; ENABLE_TESTABILITY = YES;}; name = Debug;};
+  A00000000000000000000013 = {isa = XCBuildConfiguration; buildSettings = {CLANG_ENABLE_MODULES = YES; SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 16.0; SWIFT_VERSION = 5.0; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; SWIFT_COMPILATION_MODE = wholemodule;}; name = Release;};
+  A00000000000000000000014 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_USER_SCRIPT_SANDBOXING = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ReadingRoom/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.wiktorkaluzny.readingroom.ipad; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; TARGETED_DEVICE_FAMILY = 2;}; name = Debug;};
+  A00000000000000000000015 = {isa = XCBuildConfiguration; buildSettings = {ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon; CODE_SIGN_STYLE = Automatic; CURRENT_PROJECT_VERSION = 1; ENABLE_USER_SCRIPT_SANDBOXING = NO; GENERATE_INFOPLIST_FILE = NO; INFOPLIST_FILE = ReadingRoom/Info.plist; PRODUCT_BUNDLE_IDENTIFIER = com.wiktorkaluzny.readingroom.ipad; PRODUCT_NAME = "$(TARGET_NAME)"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = NO; SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO; TARGETED_DEVICE_FAMILY = 2;}; name = Release;};
+
+ B00000000000000000000001 = {isa = PBXNativeTarget; buildConfigurationList = B00000000000000000000009; buildPhases = (B00000000000000000000005); buildRules = (); dependencies = (B00000000000000000000006); name = ReadingRoomTests; productName = ReadingRoomTests; productReference = B00000000000000000000002; productType = "com.apple.product-type.bundle.unit-test";};
+ B00000000000000000000002 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ReadingRoomTests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
+ B00000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadingRoomTests/ReadingRoomTests.swift; sourceTree = "<group>";};
+ B00000000000000000000004 = {isa = PBXBuildFile; fileRef = B00000000000000000000003;};
+ B00000000000000000000005 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (B00000000000000000000004); runOnlyForDeploymentPostprocessing = 0;};
+ B00000000000000000000006 = {isa = PBXTargetDependency; target = A00000000000000000000002; targetProxy = B00000000000000000000007;};
+ B00000000000000000000007 = {isa = PBXContainerItemProxy; containerPortal = A00000000000000000000001; proxyType = 1; remoteGlobalIDString = A00000000000000000000002; remoteInfo = ReadingRoom;};
+ B00000000000000000000009 = {isa = XCConfigurationList; buildConfigurations = (B0000000000000000000000A,B0000000000000000000000B); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;};
+ B0000000000000000000000A = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ReadingRoom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ReadingRoom"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.wiktorkaluzny.readingroom.ipad.tests; PRODUCT_NAME = "$(TARGET_NAME)"; TARGETED_DEVICE_FAMILY = 2; CODE_SIGN_STYLE = Automatic;}; name = Debug;};
+ B0000000000000000000000B = {isa = XCBuildConfiguration; buildSettings = {BUNDLE_LOADER = "$(TEST_HOST)"; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ReadingRoom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ReadingRoom"; GENERATE_INFOPLIST_FILE = YES; PRODUCT_BUNDLE_IDENTIFIER = com.wiktorkaluzny.readingroom.ipad.tests; PRODUCT_NAME = "$(TARGET_NAME)"; TARGETED_DEVICE_FAMILY = 2; CODE_SIGN_STYLE = Automatic;}; name = Release;};
+ C00000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = ReadingRoom/Assets.xcassets; sourceTree = "<group>";};
+ C00000000000000000000002 = {isa = PBXBuildFile; fileRef = C00000000000000000000001;};
+ };
+ rootObject = A00000000000000000000001;
+}
